@@ -1,0 +1,107 @@
+extends layout
+
+block content
+  style.
+    /* General Styles */
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #F46F6F0D;
+      color: #333;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Background Shape */
+    .background-shape {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(2);
+      width: 120px;
+      height: 140px;
+      border: 2px solid #F46F6F0D;
+      background: none;
+      border-radius: 50% 50% 0 0;
+      clip-path: polygon(50% 0%, 90% 40%, 100% 100%, 0% 100%, 10% 40%);
+    }
+    
+    /* Hero Section */
+    .hero {
+      padding: 80px 10%;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+      flex: 1;
+    }
+    
+    .new-badge {
+      display: inline-block;
+      background-color: #F46F6F;
+      color: white;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .badge {
+      background-color: white;
+      color: #F46F6F;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-right: 5px;
+    }
+    
+    h1 {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 10px 0;
+      color: #222;
+    }
+    
+    .subtitle {
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    
+    /* CTA Button */
+    .cta-button {
+      display: inline-block;
+      background-color: #F46F6F;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 30px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      text-decoration: none;
+    }
+    
+    .cta-button:hover {
+      background-color: #c4004a;
+    }
+
+  // Background Blood Drop
+  div.background-shape
+  
+  // Hero Section
+  main.hero
+    .new-badge
+      span.badge New 
+      | Blood Donation Platform
+    h1 Give Blood
+      br
+      | Save Lives
+    p.subtitle Every Drop Counts - Be a Hero Today
+    a.cta-button(href="/donors") Donate Now

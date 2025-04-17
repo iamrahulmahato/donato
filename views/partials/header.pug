@@ -1,0 +1,138 @@
+//.navbar.navbar-light.fixed-top.navbar-expand-lg.bg-light
+//  .container
+//    a.navbar-brand(href='/')
+//      i.fas.fa-cube
+//      | Project name
+//    button.navbar-toggler(type='button', data-toggle='collapse', data-target='.navbar-collapse')
+//      span.sr-only Toggle navigation
+//      span.navbar-toggler-icon
+//    .collapse.navbar-collapse
+//      ul.nav.navbar-nav
+//        li.nav-item(class=(title === 'Home') ? 'active' : undefined)
+//          a.nav-link(href='/') Home
+//        li.nav-item(class=(title === 'API Examples') ? 'active' : undefined)
+//          a.nav-link(href='/api') API Examples
+//        li.nav-item(class=(title === 'Contact') ? 'active' : undefined)
+//          a.nav-link(href='/contact') Contact
+//      ul.nav.navbar-nav.ml-auto
+//        if !user
+//          li.nav-item(class=(title === 'Login') ? 'active' : undefined)
+//            a.nav-link(href='/login') Login
+//          li.nav-item(class=(title === 'Create Account') ? 'active' : undefined)
+//            a.nav-link(href='/signup') Create Account
+//        else
+//          li.dropdown(class=(title === 'Account Management') ? 'active' : undefined).nav-item
+//            a.dropdown-toggle.nav-link(href='#', data-toggle='dropdown')
+//              if user.profile.picture
+//                img(src=user.profile.picture)
+//              else
+//                img(src=user.gravatar(60))
+//              span= user.profile.name || user.email || user.id
+//              i.caret
+//            div.dropdown-menu
+//              a.dropdown-item(href='/account') My Account
+//              div.dropdown-divider
+//              a.dropdown-item(href='/logout') Logout
+//
+//
+//
+
+nav.navbar.navbar-expand-lg.fixed-top
+  .container
+    a.navbar-brand(href='/')
+      i.fas.fa-heartbeat.me-2.text-danger
+      | Blood Mate
+    button.navbar-toggler(type='button' data-bs-toggle='collapse' data-bs-target='#navbarColor01' aria-controls='navbarColor01' aria-expanded='false' aria-label='Toggle navigation')
+      span.navbar-toggler-icon
+    #navbarColor01.collapse.navbar-collapse
+      ul.navbar-nav.me-auto.mb-2.mb-lg-0
+        li.nav-item
+          a.nav-link(class=(title === 'Home') ? 'active' : '', href='/')
+            i.fas.fa-home.me-1
+            | Home
+        li.nav-item
+          a.nav-link(class=(title === 'Donors') ? 'active' : '', href='/donors')
+            i.fas.fa-users.me-1
+            | Find Donors
+        if user
+          li.nav-item
+            a.nav-link(class=(title === 'Messages') ? 'active' : '', href='/messages')
+              i.fas.fa-comments.me-1
+              | Messages
+              if user.unreadMessages
+                span.badge.bg-danger.ms-1 #{user.unreadMessages}
+
+      .d-flex.align-items-center
+        if !user
+          a.btn.btn-outline-light.me-2(href='/login')
+            i.fas.fa-sign-in-alt.me-1
+            | Login
+          a.btn.btn-danger(href='/signup')
+            i.fas.fa-user-plus.me-1
+            | Create Account
+        else
+          .dropdown.me-3
+            button.btn.btn-link.nav-link.dropdown-toggle(type='button' data-bs-toggle='dropdown' aria-expanded='false')
+              if user.profile.name
+                | #{user.profile.name}
+              else
+                | My Account
+            ul.dropdown-menu.dropdown-menu-end
+              li
+                a.dropdown-item(href='/account')
+                  i.fas.fa-user-circle.me-2
+                  | Profile
+              li
+                hr.dropdown-divider
+              li
+                a.dropdown-item.text-danger(href='/logout')
+                  i.fas.fa-sign-out-alt.me-2
+                  | Sign out
+
+style.
+  .navbar {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  .navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+  }
+  .nav-link {
+    font-weight: 500;
+    color: #333 !important;
+    transition: color 0.3s;
+  }
+  .nav-link:hover {
+    color: #dc3545 !important;
+  }
+  .nav-link.active {
+    color: #dc3545 !important;
+  }
+  .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+  }
+  .btn-outline-light {
+    color: #333;
+    border-color: #ddd;
+  }
+  .btn-outline-light:hover {
+    background-color: #f8f9fa;
+    color: #dc3545;
+    border-color: #dc3545;
+  }
+  .dropdown-item:hover {
+    background-color: #f8f9fa;
+  }
+  .dropdown-item.text-danger:hover {
+    background-color: #dc3545;
+    color: white !important;
+  }
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.25em 0.6em;
+    border-radius: 10px;
+  }
+
