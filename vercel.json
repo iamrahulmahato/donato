@@ -15,11 +15,5 @@
       "src": "/(.*)",
       "dest": "/app.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "MONGODB_URI": "@mongodb_uri",
-    "SESSION_SECRET": "@session_secret",
-    "BASE_URL": "@base_url"
-  }
+  ]
 }
