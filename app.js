@@ -1,4 +1,3 @@
-
 const path = require('path');
 const express = require('express');
 const compression = require('compression');
@@ -38,7 +37,6 @@ const limiter = rateLimit({
   }
 });
 
-// Create a separate limiter for chat routes
 const chatLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute
@@ -51,7 +49,7 @@ let numberOfProxies;
 if (secureTransfer) numberOfProxies = 1; else numberOfProxies = 0;
 
 /**
- * Controllers (route handlers).
+ * Controllers 
  */
 const homeController = require('./controllers/home');
 const userController = require('./controllers/user');
@@ -81,11 +79,26 @@ initializeChat(server);
 /**
  * Connect to MongoDB.
  */
-mongoose.connect(process.env.MONGODB_URI);
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/bloodchain', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4
+});
+
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connected successfully');
+});
+
 mongoose.connection.on('error', (err) => {
-  console.error(err);
-  console.log('%s MongoDB connection error. Please make sure MongoDB is running.');
-  process.exit();
+  console.error('MongoDB connection error:', err);
+  console.log('Please make sure MongoDB is running and accessible');
+  process.exit(1);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
 });
 
 /**
@@ -189,6 +202,11 @@ app.get('/account', passportConfig.isAuthenticated, userController.getAccount);
 app.post('/account/profile', passportConfig.isAuthenticated, userController.postUpdateProfile);
 app.post('/account/password', passportConfig.isAuthenticated, userController.postUpdatePassword);
 app.get('/donors', donorController.getDonors);
+app.get('/about', (req, res) => {
+  res.render('about', {
+    title: 'About Us'
+  });
+});
 
 // Chat routes
 app.get('/api/chat/conversations', passportConfig.isAuthenticated, chatController.getConversations);

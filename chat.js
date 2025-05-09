@@ -11,7 +11,6 @@ function initializeChat(server) {
     }
   });
 
-  // Authentication middleware
   io.use(async (socket, next) => {
     const userId = socket.handshake.auth.userId;
     const token = socket.handshake.auth.token;
@@ -31,7 +30,6 @@ function initializeChat(server) {
     }
   });
 
-  // Store online users
   const onlineUsers = new Map();
 
   io.on('connection', (socket) => {

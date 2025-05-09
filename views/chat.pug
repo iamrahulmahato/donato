@@ -61,7 +61,7 @@ block content
           .list-group.list-group-flush#conversationsList
 
       .col-md-8
-        .card#chatContainer.d-none
+        .card#chatContainer(class=targetUserId ? '' : 'd-none')
           .card-header.bg-white.border-bottom-0.d-flex.justify-content-between.align-items-center
             h5.mb-0#chatRecipientName
             button.btn.btn-sm.btn-outline-secondary#closeChat(type='button')
@@ -128,7 +128,6 @@ block scripts
             
             if (data.conversations.length === 0) {
               conversationsList.innerHTML = '<div class="list-group-item text-muted">No conversations yet</div>';
-              return;
             }
 
             data.conversations.forEach(conv => {
@@ -157,19 +156,15 @@ block scripts
               conversationsList.appendChild(item);
             });
 
+            // Always open chat if targetUserId is present
             if (targetUserId && !currentChatPartner) {
-              const targetConv = data.conversations.find(conv => conv.otherUser._id === targetUserId);
-              if (targetConv) {
-                openChat(targetConv.otherUser._id, targetConv.otherUser.profile.name || 'Anonymous User');
-              } else {
-                authenticatedFetch(`/api/user/${targetUserId}`)
-                  .then(user => {
-                    if (user && user.profile) {
-                      openChat(user._id, user.profile.name || 'Anonymous User');
-                    }
-                  })
-                  .catch(err => console.error('Error fetching user:', err));
-              }
+              authenticatedFetch(`/api/user/${targetUserId}`)
+                .then(user => {
+                  if (user && user.profile) {
+                    openChat(user._id, user.profile.name || 'Anonymous User');
+                  }
+                })
+                .catch(err => console.error('Error fetching user:', err));
             }
           })
           .catch(err => console.error('Error loading conversations:', err));
@@ -177,8 +172,6 @@ block scripts
     }
 
     function openChat(partnerId, partnerName) {
-      if (currentChatPartner === partnerId) return;
-      
       currentChatPartner = partnerId;
       document.getElementById('chatContainer').classList.remove('d-none');
       document.getElementById('chatRecipientName').textContent = partnerName;
@@ -188,11 +181,11 @@ block scripts
           const messageContainer = document.getElementById('messageContainer');
           messageContainer.innerHTML = '';
           
-          if (data.messages.length === 0) {
+          if (!data.messages || data.messages.length === 0) {
             messageContainer.innerHTML = '<div class="text-center text-muted my-3">No messages yet</div>';
           } else {
             data.messages.forEach(msg => {
-              const isOwn = msg.sender._id === userId;
+              const isOwn = msg.sender._id === userId || msg.sender === userId;
               const messageDiv = document.createElement('div');
               messageDiv.className = `message ${isOwn ? 'own' : 'other'} mb-2`;
               messageDiv.innerHTML = `
@@ -204,10 +197,8 @@ block scripts
               messageContainer.appendChild(messageDiv);
             });
           }
-          
           messageContainer.scrollTop = messageContainer.scrollHeight;
-          
-          if (data.messages.length > 0) {
+          if (data.messages && data.messages.length > 0) {
             authenticatedFetch(`/api/chat/mark-read/${partnerId}`, { method: 'POST' })
               .then(() => loadConversations())
               .catch(err => console.error('Error marking messages as read:', err));
