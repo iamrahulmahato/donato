@@ -12,8 +12,10 @@
     "Yashar Fakhari (https://github.com/YasharF)"
   ],
   "scripts": {
-    "postinstall": "patch-package && npm run scss",
+    "postinstall": "npm run patch && npm run scss",
+    "patch": "patch-package || true",
     "start": "npm run scss && node app.js",
+    "build": "npm run scss",
     "dev": "npm run scss && nodemon app.js",
     "test": "nyc mocha --timeout=60000 --exit",
     "lint": "eslint \"**/*.js\"",
@@ -47,6 +49,7 @@
     "morgan": "^1.10.0",
     "passport": "^0.6.0",
     "passport-local": "^1.0.0",
+    "patch-package": "^8.0.0",
     "pug": "^3.0.2",
     "sass": "^1.69.3",
     "socket.io": "^4.8.1",
