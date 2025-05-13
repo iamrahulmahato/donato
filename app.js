@@ -79,12 +79,14 @@ initializeChat(server);
 /**
  * Connect to MongoDB.
  */
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/bloodchain', {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 10000,
   socketTimeoutMS: 45000,
   family: 4
+}).catch(err => {
+  console.error('MongoDB connection error:', err);
 });
 
 mongoose.connection.on('connected', () => {
@@ -104,11 +106,11 @@ mongoose.connection.on('disconnected', () => {
 /**
  * Express configuration.
  */
-app.set('host', process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0');
-app.set('port', process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080);
+app.set('host', '0.0.0.0');
+app.set('port', process.env.PORT || 3000);
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
-app.set('trust proxy', numberOfProxies);
+app.set('trust proxy', 1);
 app.use(compression());
 app.use(logger('dev'));
 app.use(bodyParser.json());
@@ -121,14 +123,16 @@ app.use(session({
   name: 'startercookie',
   cookie: {
     maxAge: 1209600000,
-    secure: secureTransfer
+    secure: true,
+    sameSite: 'none'
   },
   store: MongoStore.create({
-    client: mongoose.connection.getClient(),
-    dbName: 'blood-chain',
+    mongoUrl: process.env.MONGODB_URI,
+    dbName: 'bloodchain',
     stringify: false,
     autoRemove: 'interval',
-    autoRemoveInterval: 1
+    autoRemoveInterval: 1,
+    ttl: 14 * 24 * 60 * 60 // 14 days
   })
 }));
 app.use(passport.initialize());
@@ -172,7 +176,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/', express.static(path.join(__dirname, 'public'), { maxAge: 31557600000 }));
+app.use('/', express.static(path.join(__dirname, 'public'), { 
+  maxAge: 31557600000,
+  etag: true,
+  lastModified: true
+}));
 app.use('/js/lib', express.static(path.join(__dirname, 'node_modules/bootstrap/dist/js'), { maxAge: 31557600000 }));
 app.use('/js/lib', express.static(path.join(__dirname, 'node_modules/jquery/dist'), { maxAge: 31557600000 }));
 app.use('/webfonts', express.static(path.join(__dirname, 'node_modules/@fortawesome/fontawesome-free/webfonts'), { maxAge: 31557600000 }));
