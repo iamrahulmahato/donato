@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: blood-chain
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node app.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        sync: false

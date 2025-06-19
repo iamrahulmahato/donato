@@ -81,14 +81,7 @@ if (!process.env.VERCEL) {
 /**
  * Connect to MongoDB.
  */
-let cachedDb = null;
-
 const connectDB = async () => {
-  if (cachedDb) {
-    console.log('Using cached database connection');
-    return;
-  }
-
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -99,15 +92,10 @@ const connectDB = async () => {
       retryWrites: true,
       w: 'majority'
     });
-    
-    cachedDb = mongoose.connection;
     console.log('MongoDB connected successfully');
   } catch (err) {
     console.error('MongoDB connection error:', err);
-    cachedDb = null;
-    if (!process.env.VERCEL) {
-      process.exit(1);
-    }
+    process.exit(1);
   }
 };
 
@@ -131,8 +119,8 @@ mongoose.connection.on('disconnected', () => {
 /**
  * Express configuration.
  */
+app.set('host', '0.0.0.0');
 app.set('port', process.env.PORT || 3000);
-app.enable('trust proxy');
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 app.set('trust proxy', 1);
@@ -151,8 +139,7 @@ app.use(session({
   cookie: {
     maxAge: 1209600000, // 14 days
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: process.env.VERCEL_URL ? `.${process.env.VERCEL_URL}` : undefined
+    sameSite: 'lax'
   },
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
@@ -331,27 +318,26 @@ app.use('/api/chat', chatLimiter);
 app.use('/chat', chatLimiter);
 
 /**
+ * Error handling for uncaught issues
+ */
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  // Give the server a grace period to complete existing requests
+  setTimeout(() => {
+    process.exit(1);
+  }, 1000);
+});
+
+/**
  * Start Express server.
  */
-if (process.env.VERCEL) {
-  // For Vercel serverless deployment
-  module.exports = app;
-
-  // Handle unhandled promise rejections
-  process.on('unhandledRejection', (err) => {
-    console.error('Unhandled Rejection:', err);
-  });
-
-  // Handle uncaught exceptions
-  process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-  });
-} else {
-  // Start the server for local development
-  server.listen(app.get('port'), () => {
-    console.log(`App is running on port ${app.get('port')} in ${app.get('env')} mode.`);
-    console.log('Press CTRL-C to stop.');
-  });
-}
+server.listen(app.get('port'), () => {
+  console.log(`App is running on port ${app.get('port')} in ${app.get('env')} mode.`);
+  console.log('Press CTRL-C to stop.');
+});
 
 module.exports = server;
