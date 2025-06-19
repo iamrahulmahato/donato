@@ -79,17 +79,28 @@ initializeChat(server);
 /**
  * Connect to MongoDB.
  */
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 30000,
-  socketTimeoutMS: 60000,
-  family: 4,
-  retryWrites: true,
-  w: 'majority'
-}).catch(err => {
-  console.error('MongoDB connection error:', err);
-});
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 60000,
+      family: 4,
+      retryWrites: true,
+      w: 'majority'
+    });
+    console.log('MongoDB connected successfully');
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    if (!process.env.VERCEL) {
+      // Only exit in non-Vercel environments
+      process.exit(1);
+    }
+  }
+};
+
+connectDB();
 
 mongoose.connection.on('connected', () => {
   console.log('MongoDB connected successfully');
@@ -108,8 +119,8 @@ mongoose.connection.on('disconnected', () => {
 /**
  * Express configuration.
  */
-app.set('host', '0.0.0.0');
 app.set('port', process.env.PORT || 3000);
+app.enable('trust proxy');
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 app.set('trust proxy', 1);
@@ -248,40 +259,59 @@ app.use((req, res, next) => {
   res.status(404).send('Page Not Found');
 });
 
-// Async error handler
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Error Details:', {
+    message: err.message,
+    stack: err.stack,
+    code: err.code,
+    name: err.name
+  });
   
   // Handle mongoose validation errors
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map(e => ({ msg: e.message }));
+    if (req.xhr || /^\/api\//.test(req.path)) {
+      return res.status(400).json({ errors });
+    }
     req.flash('errors', errors);
     return res.redirect('back');
   }
 
   // Handle unique constraint errors
   if (err.code === 11000) {
+    if (req.xhr || /^\/api\//.test(req.path)) {
+      return res.status(400).json({ error: 'That email address is already in use.' });
+    }
     req.flash('errors', [{ msg: 'That email address is already in use.' }]);
     return res.redirect('back');
   }
 
   const status = err.status || 500;
-  
-  if (req.xhr || /^\/api\//.test(req.path)) {
-    // Handle API/AJAX errors
-    return res.status(status).json({
-      error: process.env.NODE_ENV === 'development' ? err.message : 'An error occurred'
-    });
-  }
-
-  // Handle web page errors
-  res.status(status);
-  res.render('error', {
+  const errorResponse = {
     title: `Error ${status}`,
     message: err.message || 'An error occurred',
     error: process.env.NODE_ENV === 'development' ? err : {},
     status: status
-  });
+  };
+
+  // Log detailed error for debugging in production
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Production Error:', {
+      ...errorResponse,
+      stack: err.stack,
+      originalError: err
+    });
+  }
+
+  if (req.xhr || /^\/api\//.test(req.path)) {
+    return res.status(status).json({
+      error: process.env.NODE_ENV === 'development' ? errorResponse : 'An error occurred'
+    });
+  }
+
+  res.status(status);
+  res.render('error', errorResponse);
 });
 
 // Apply chat-specific rate limiter to chat routes
@@ -292,8 +322,8 @@ app.use('/chat', chatLimiter);
  * Start Express server.
  */
 if (process.env.VERCEL) {
-  // Export the app for Vercel serverless deployment
-  module.exports = app;
+  // Export both app and server for Vercel serverless deployment
+  module.exports = server;
 } else {
   // Start the server for local development
   server.listen(app.get('port'), () => {
@@ -301,5 +331,10 @@ if (process.env.VERCEL) {
     console.log('Press CTRL-C to stop.');
   });
 }
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+});
 
 module.exports = server;
