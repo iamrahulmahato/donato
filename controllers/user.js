@@ -122,33 +122,46 @@ exports.getSignup = (req, res) => {
  * Create a new local account.
  */
 exports.postSignup = async (req, res, next) => {
-  const validationErrors = [];
-  if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Please enter a valid email address.' });
-  if (!validator.isLength(req.body.password, { min: 8 })) validationErrors.push({ msg: 'Password must be at least 8 characters long' });
-  if (validator.escape(req.body.password) !== validator.escape(req.body.confirmPassword)) validationErrors.push({ msg: 'Passwords do not match' });
-  if (validationErrors.length) {
-    req.flash('errors', validationErrors);
-    return res.redirect('/signup');
-  }
-  req.body.email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
   try {
-    const existingUser = await User.findOne({ email: req.body.email });
-    if (existingUser) {
-      req.flash('errors', { msg: 'Account with that email address already exists.' });
+    const validationErrors = [];
+    if (!validator.isEmail(req.body.email)) validationErrors.push({ msg: 'Please enter a valid email address.' });
+    if (!validator.isLength(req.body.password, { min: 8 })) validationErrors.push({ msg: 'Password must be at least 8 characters long' });
+    if (req.body.password !== req.body.confirmPassword) validationErrors.push({ msg: 'Passwords do not match' });
+
+    if (validationErrors.length) {
+      req.flash('errors', validationErrors);
       return res.redirect('/signup');
     }
+
+    const email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
+    
+    const existingUser = await User.findOne({ email: email });
+    if (existingUser) {
+      req.flash('errors', [{ msg: 'Account with that email address already exists.' }]);
+      return res.redirect('/signup');
+    }
+
     const user = new User({
-      email: req.body.email,
-      password: req.body.password
+      email: email,
+      password: req.body.password,
+      emailVerified: false,
+      onboarded: false,
+      profile: {} // Let the schema defaults handle the profile initialization
     });
+
     await user.save();
-    req.logIn(user, (err) => {
-      if (err) {
-        return next(err);
-      }
-      res.redirect('/');
+
+    return new Promise((resolve, reject) => {
+      req.logIn(user, (err) => {
+        if (err) {
+          return reject(err);
+        }
+        req.flash('success', [{ msg: 'Account created successfully! Please complete your profile.' }]);
+        resolve(res.redirect('/account'));
+      });
     });
   } catch (err) {
+    console.error('Signup Error:', err);
     next(err);
   }
 };

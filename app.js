@@ -22,7 +22,7 @@ const upload = multer({ dest: path.join(__dirname, 'uploads') });
 dotenv.config({ path: '.env' });
 
 
-const secureTransfer = (process.env.BASE_URL.startsWith('https'));
+const secureTransfer = process.env.VERCEL_URL ? true : (process.env.NODE_ENV === 'production');
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -82,9 +82,11 @@ initializeChat(server);
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 10000,
-  socketTimeoutMS: 45000,
-  family: 4
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 60000,
+  family: 4,
+  retryWrites: true,
+  w: 'majority'
 }).catch(err => {
   console.error('MongoDB connection error:', err);
 });
@@ -115,49 +117,64 @@ app.use(compression());
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Apply rate limiting after body parsing but before session
 app.use(limiter);
 app.use(session({
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   secret: process.env.SESSION_SECRET,
   name: 'startercookie',
   cookie: {
-    maxAge: 1209600000,
-    secure: true,
-    sameSite: 'none'
+    maxAge: 1209600000, // 14 days
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    domain: process.env.VERCEL_URL ? `.${process.env.VERCEL_URL}` : undefined
   },
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    dbName: 'bloodchain',
-    stringify: false,
     autoRemove: 'interval',
-    autoRemoveInterval: 1,
-    ttl: 14 * 24 * 60 * 60 // 14 days
+    autoRemoveInterval: 60, // Check expired sessions every hour
+    ttl: 14 * 24 * 60 * 60, // 14 days
+    touchAfter: 24 * 3600 // Only update session every 24 hours unless data changes
   })
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 
+// Make Flash Messages available to all views
+app.use((req, res, next) => {
+  res.locals.messages = req.flash();
+  next();
+});
+
+// Environment middleware - make env variables available to all views
+app.use((req, res, next) => {
+  res.locals.env = {
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    isProduction: process.env.NODE_ENV === 'production'
+  };
+  next();
+});
+
 // Initialize CSRF protection
 app.use(lusca({
-  csrf: {
-    cookie: 'XSRF-TOKEN',
-    angular: true
-  },
+  csrf: true,
   xframe: 'SAMEORIGIN',
   xssProtection: true
 }));
 
-// Make CSRF token available to views
+// Make user and CSRF token available to views
 app.use((req, res, next) => {
+  // Skip CSRF for API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+
   res.locals.user = req.user;
+  // Generate CSRF token
   res.locals._csrf = req.csrfToken();
-  res.cookie('XSRF-TOKEN', req.csrfToken());
-  res.locals.env = {
-    BASE_URL: process.env.BASE_URL,
-    NODE_ENV: process.env.NODE_ENV,
-  };
   next();
 });
 
@@ -231,14 +248,41 @@ app.use((req, res, next) => {
   res.status(404).send('Page Not Found');
 });
 
-if (process.env.NODE_ENV === 'development') {
-  app.use(errorHandler());
-} else {
-  app.use((err, req, res) => {
-    console.error(err);
-    res.status(500).send('Server Error');
+// Async error handler
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  
+  // Handle mongoose validation errors
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors).map(e => ({ msg: e.message }));
+    req.flash('errors', errors);
+    return res.redirect('back');
+  }
+
+  // Handle unique constraint errors
+  if (err.code === 11000) {
+    req.flash('errors', [{ msg: 'That email address is already in use.' }]);
+    return res.redirect('back');
+  }
+
+  const status = err.status || 500;
+  
+  if (req.xhr || /^\/api\//.test(req.path)) {
+    // Handle API/AJAX errors
+    return res.status(status).json({
+      error: process.env.NODE_ENV === 'development' ? err.message : 'An error occurred'
+    });
+  }
+
+  // Handle web page errors
+  res.status(status);
+  res.render('error', {
+    title: `Error ${status}`,
+    message: err.message || 'An error occurred',
+    error: process.env.NODE_ENV === 'development' ? err : {},
+    status: status
   });
-}
+});
 
 // Apply chat-specific rate limiter to chat routes
 app.use('/api/chat', chatLimiter);
@@ -247,19 +291,15 @@ app.use('/chat', chatLimiter);
 /**
  * Start Express server.
  */
-server.listen(app.get('port'), () => {
-  const { BASE_URL } = process.env;
-  const colonIndex = BASE_URL.lastIndexOf(':');
-  const port = parseInt(BASE_URL.slice(colonIndex + 1), 10);
-
-  if (!BASE_URL.startsWith('http://localhost')) {
-    console.log(`The BASE_URL env variable is set to ${BASE_URL}. If you directly test the application through http://localhost:${app.get('port')} instead of the BASE_URL, it may cause a CSRF mismatch or an Oauth authentication failure. To avoid the issues, change the BASE_URL or configure your proxy to match it.\n`);
-  } else if (app.get('port') !== port) {
-    console.warn(`WARNING: The BASE_URL environment variable and the App have a port mismatch. If you plan to view the app in your browser using the localhost address, you may need to adjust one of the ports to make them match. BASE_URL: ${BASE_URL}\n`);
-  }
-
-  console.log(`App is running on http://localhost:${app.get('port')} in ${app.get('env')} mode.`);
-  console.log('Press CTRL-C to stop.');
-});
+if (process.env.VERCEL) {
+  // Export the app for Vercel serverless deployment
+  module.exports = app;
+} else {
+  // Start the server for local development
+  server.listen(app.get('port'), () => {
+    console.log(`App is running on port ${app.get('port')} in ${app.get('env')} mode.`);
+    console.log('Press CTRL-C to stop.');
+  });
+}
 
 module.exports = server;

@@ -1,0 +1,19 @@
+extends layout
+
+block content
+  .container.text-center.py-5
+    h1.display-1 Oops!
+    if error.status === 404
+      h2 Page Not Found
+      p The page you're looking for doesn't exist.
+    else
+      h2= message || 'Something went wrong'
+      if env && env.isProduction
+        p Our team has been notified. Please try again later.
+      else if error && error.stack
+        pre.bg-light.p-3.mt-3.rounded
+          code= error.stack
+      else
+        p Please try again later.
+    .mt-4
+      a.btn.btn-primary(href='/') Return Home

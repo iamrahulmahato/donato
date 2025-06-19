@@ -8,12 +8,21 @@
         "includeFiles": [
           "public/**",
           "views/**",
-          "node_modules/**/*.scss"
+          "controllers/**",
+          "models/**",
+          "config/**",
+          "node_modules/**/*.scss",
+          "patches/**",
+          "*.js"
         ]
       }
     }
   ],
   "routes": [
+    {
+      "src": "/public/(.*)",
+      "dest": "/public/$1"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/api/$1"

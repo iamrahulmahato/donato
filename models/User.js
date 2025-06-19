@@ -15,8 +15,18 @@ const pointSchema = new mongoose.Schema({
 });
 
 const userSchema = new mongoose.Schema({
-  email: { type: String, unique: true },
-  password: String,
+  email: { 
+    type: String, 
+    unique: true,
+    required: true,
+    lowercase: true,
+    trim: true
+  },
+  password: { 
+    type: String,
+    required: true,
+    minlength: 8
+  },
   passwordResetToken: String,
   passwordResetExpires: Date,
   emailVerificationToken: String,
@@ -40,27 +50,28 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   },
   profile: {
-    name: String,
-    phone: String,
-    age: Number,
+    name: { type: String, default: '' },
+    phone: { type: String, default: '' },
+    age: { type: Number, min: 0, max: 120 },
     address: {
-      street: String,
-      city: String,
-      state: String,
-      country: String,
-      postalCode: String
+      street: { type: String, default: '' },
+      city: { type: String, default: '' },
+      state: { type: String, default: '' },
+      country: { type: String, default: '' },
+      postalCode: { type: String, default: '' }
     },
     bloodGroup: {
       type: String,
-      enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+      enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+      default: undefined
     },
-    gender: String,
+    gender: { type: String, enum: ['Male', 'Female', 'Other'], default: undefined },
     location: {
       type: pointSchema,
-      index: '2dsphere'
+      required: false
     },
-    website: String,
-    picture: String
+    website: { type: String, default: '' },
+    picture: { type: String, default: '' }
   }
 }, { timestamps: true });
 

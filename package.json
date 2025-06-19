@@ -1,27 +1,25 @@
 {
   "name": "blood-chain",
   "version": "8.0.1",
-  "description": "A boilerplate for Node.js web applications",
+  "description": "Bloodmate",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sahat/hackathon-starter.git"
+    "url": "https://github.com/iamrahulmahato/donato"
   },
   "license": "MIT",
-  "author": "Sahat Yalkabov",
+  "author": "Rahul Mahato ",
   "contributors": [
-    "Yashar Fakhari (https://github.com/YasharF)"
+    "Rahul Mahato (https://github.com/iamrahulmahato)"
   ],
   "scripts": {
-    "postinstall": "npm run patch && npm run scss",
-    "patch": "patch-package || true",
-    "start": "npm run scss && node app.js",
+    "postinstall": "npm run scss",
+    "start": "node app.js",
     "build": "npm run scss",
+    "vercel-build": "npm run scss",
     "dev": "npm run scss && nodemon app.js",
     "test": "nyc mocha --timeout=60000 --exit",
     "lint": "eslint \"**/*.js\"",
-    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then husky install; fi",
-    "scss": "sass --no-source-map --load-path=./ --update ./public/css:./public/css",
-    "lintStage": "node_modules/.bin/lint-staged"
+    "scss": "sass --no-source-map --load-path=./ --update ./public/css:./public/css"
   },
   "lint-staged": {
     "*.js": [
