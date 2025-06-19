@@ -19,7 +19,7 @@
     "dev": "npm run scss && nodemon app.js",
     "test": "nyc mocha --timeout=60000 --exit",
     "lint": "eslint \"**/*.js\"",
-    "scss": "sass --no-source-map --load-path=./ --update ./public/css:./public/css"
+    "scss": "npx sass --no-source-map --load-path=./ --update ./public/css:./public/css"
   },
   "lint-staged": {
     "*.js": [

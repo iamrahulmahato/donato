@@ -2,7 +2,7 @@ services:
   - type: web
     name: blood-chain
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: node app.js
     envVars:
       - key: NODE_ENV
