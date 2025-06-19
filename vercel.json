@@ -5,27 +5,38 @@
       "src": "app.js",
       "use": "@vercel/node",
       "config": {
+        "maxLambdaSize": "50mb",
         "includeFiles": [
           "public/**",
           "views/**",
           "controllers/**",
           "models/**",
           "config/**",
-          "node_modules/**/*.scss",
-          "patches/**",
+          "chat.js",
           "*.js"
         ]
       }
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/public/(.*)",
-      "dest": "/public/$1"
+      "dest": "/public/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/socket.io/(.*)",
+      "dest": "/app.js"
+    },
+    {
+      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg|json))",
+      "dest": "/public/$1"
     },
     {
       "src": "/(.*)",

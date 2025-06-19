@@ -68,18 +68,27 @@ const app = express();
 console.log('Run this app using "npm start" to include sass/scss/css builds.\n');
 
 /**
- * Socket.io
+ * Socket.io setup
  */
 const server = createServer(app);
 
-// Initialize chat system
-const { initializeChat } = require('./chat');
-initializeChat(server);
+// Initialize socket.io only in non-Vercel environment
+if (!process.env.VERCEL) {
+  const { initializeChat } = require('./chat');
+  initializeChat(server);
+}
 
 /**
  * Connect to MongoDB.
  */
+let cachedDb = null;
+
 const connectDB = async () => {
+  if (cachedDb) {
+    console.log('Using cached database connection');
+    return;
+  }
+
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -90,16 +99,19 @@ const connectDB = async () => {
       retryWrites: true,
       w: 'majority'
     });
+    
+    cachedDb = mongoose.connection;
     console.log('MongoDB connected successfully');
   } catch (err) {
     console.error('MongoDB connection error:', err);
+    cachedDb = null;
     if (!process.env.VERCEL) {
-      // Only exit in non-Vercel environments
       process.exit(1);
     }
   }
 };
 
+// Connect to MongoDB
 connectDB();
 
 mongoose.connection.on('connected', () => {
@@ -322,8 +334,18 @@ app.use('/chat', chatLimiter);
  * Start Express server.
  */
 if (process.env.VERCEL) {
-  // Export both app and server for Vercel serverless deployment
-  module.exports = server;
+  // For Vercel serverless deployment
+  module.exports = app;
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+  });
 } else {
   // Start the server for local development
   server.listen(app.get('port'), () => {
@@ -331,10 +353,5 @@ if (process.env.VERCEL) {
     console.log('Press CTRL-C to stop.');
   });
 }
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-});
 
 module.exports = server;
